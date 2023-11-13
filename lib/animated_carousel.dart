@@ -1,6 +1,3 @@
-import 'dart:math';
-
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hello/carousel_item.dart';
 
@@ -14,84 +11,62 @@ class AnimatedCarousel extends StatefulWidget {
 
 class _AnimatedCarouselState extends State<AnimatedCarousel>
     with SingleTickerProviderStateMixin {
-  final itemCount = 20;
   final scrollController = ScrollController();
-
-  late final List<FocusNode> focusNodes = List.generate(
-    itemCount,
-    (index) => FocusNode(debugLabel: index.toString()),
-  );
-
+  final scrollController2 = ScrollController();
   @override
   void initState() {
-    scrollController.addListener(() {});
+    scrollController.addListener(() {
+      if (scrollController.offset != scrollController2.offset) {
+        scrollController2.jumpTo(scrollController.offset);
+      }
+    });
     super.initState();
   }
 
   @override
   void dispose() {
     scrollController.dispose();
-    currentIndex.dispose();
-    for (var node in focusNodes) {
-      node.dispose();
-    }
+    scrollController2.dispose();
     super.dispose();
   }
 
-  OverlayEntry? entry;
-  ValueNotifier<int?> currentIndex = ValueNotifier(null);
-
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: widget.height,
-      child: NotificationListener(
-        onNotification: (notification) {
-          if (notification is ScrollUpdateNotification) {
-            print('AppLog: ${notification.metrics}');
-          }
-          return false;
-        },
-        child: ListView.separated(
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ListView.builder(
+          clipBehavior: Clip.none,
           controller: scrollController,
-          itemCount: itemCount,
-          cacheExtent: MediaQuery.of(context).size.width,
+          itemCount: 30,
           scrollDirection: Axis.horizontal,
           itemBuilder: (context, index) {
-            return CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.arrowLeft): () async {
-                  if (index == 0) return;
-                  currentIndex.value = max(index - 1, 0);
-                  final focusNode = focusNodes[currentIndex.value!];
-                  focusNode.requestFocus();
-                  Scrollable.ensureVisible(
-                    focusNode.context!,
-                    duration: const Duration(milliseconds: 200),
-                  );
-                },
-                const SingleActivator(LogicalKeyboardKey.arrowRight): () async {
-                  if (index == focusNodes.length - 1) return;
-                  currentIndex.value = min(index + 1, focusNodes.length - 1);
-                  final focusNode = focusNodes[currentIndex.value!];
-                  focusNode.requestFocus();
-                  Scrollable.ensureVisible(
-                    focusNode.context!,
-                    duration: const Duration(milliseconds: 200),
-                  );
-                }
-              },
-              child: CarouselItem(
-                index: index,
-                focusNode: focusNodes[index],
-              ),
+            return CarouselItem(
+              label: index.toString(),
             );
           },
-          separatorBuilder: (BuildContext context, int index) {
-            return const SizedBox(width: 10);
-          },
         ),
-      ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 90,
+          bottom: -90,
+          child: FocusScope(
+            canRequestFocus: false,
+            skipTraversal: true,
+            child: ListView.builder(
+              controller: scrollController2,
+              itemCount: 30,
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (context, index) {
+                return CarouselItem(
+                  label: index.toString(),
+                );
+              },
+            ),
+          ),
+        )
+      ],
     );
   }
 }

@@ -1,15 +1,11 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 class CarouselItem extends StatefulWidget {
-  final int index;
-  final FocusNode? focusNode;
   const CarouselItem({
     super.key,
-    required this.index,
-    this.focusNode,
+    required this.label,
   });
+  final String label;
 
   @override
   State<CarouselItem> createState() => _CarouselItemState();
@@ -17,85 +13,55 @@ class CarouselItem extends StatefulWidget {
 
 class _CarouselItemState extends State<CarouselItem>
     with SingleTickerProviderStateMixin {
-  late final focusNode = widget.focusNode ?? FocusNode();
-  OverlayEntry? overlayEntry;
-  late final AnimationController animController = AnimationController(
+  Color color = Colors.teal;
+  final node = FocusNode();
+  late final animController = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 300),
+    duration: const Duration(milliseconds: 200),
   );
   late final scaleAnim =
-      Tween<double>(begin: 1, end: 1.2).animate(animController);
-
-  Widget child(Color color) => Container(
-        width: 100,
-        height: 100,
-        color: color,
-        child: Text(hashCode.toString()),
-      );
-
-  Future<void> showOverlay() async {
-    final renderBox = context.findRenderObject() as RenderBox;
-    final position = renderBox.localToGlobal(Offset.zero);
-    print('AppLog: ${widget.index} show');
-    overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        top: position.dy,
-        left: max(position.dx, 0),
-        child: Material(
-          child: ScaleTransition(
-            scale: scaleAnim,
-            child: child(Colors.teal),
-          ),
-        ),
-      ),
-    );
-    Overlay.of(context).insert(overlayEntry!);
-    await animController.forward();
-  }
-
-  Future<void> hideOverlay() async {
-    print('AppLog: ${widget.index} hide');
-
-    await animController.reverse();
-    overlayEntry?.remove();
-    overlayEntry = null;
+      Tween<double>(begin: 1.0, end: 1.3).animate(animController);
+  void changeFocus(bool needChangeFocus) {
+    if (needChangeFocus) {
+      node.requestFocus();
+    }
   }
 
   @override
-  void initState() {
-    super.initState();
+  void didUpdateWidget(covariant CarouselItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
   }
 
   @override
   void dispose() {
-    try {
-      animController.dispose();
-    } catch (_) {}
+    animController.dispose();
+    node.dispose();
     super.dispose();
   }
 
-  Color get color => focusNode.hasFocus ? Colors.teal : Colors.grey;
-
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      focusNode: focusNode,
+    return FocusableActionDetector(
+      onShowFocusHighlight: changeFocus,
+      onShowHoverHighlight: changeFocus,
       onFocusChange: (isFocused) {
-        setState(() {});
-        if (isFocused) {
-          animController.forward();
-        }
+        isFocused ? animController.forward() : animController.reverse();
+        setState(() {
+          color = isFocused ? Colors.amber : Colors.teal;
+        });
       },
-      child: OverflowBox(
-        maxHeight: 120,
-        maxWidth: 120,
-        child: ScaleTransition(
-          scale: scaleAnim,
-          child: child(color),
+      child: ScaleTransition(
+        scale: scaleAnim,
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            border: Border.all(),
+            color: color,
+          ),
+          child: Center(child: Text(widget.label)),
         ),
       ),
     );
   }
 }
-
-class CarouselMoveIntent extends Intent {}
